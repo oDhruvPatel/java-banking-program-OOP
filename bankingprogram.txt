@@ -1,32 +1,38 @@
 import java.util.Scanner;
 
-// ============================================================
-// MAIN CLASS — handles user interaction only (no business logic)
-// This separation is called "Separation of Concerns"
-// ============================================================
 class Main {
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in); // Scanner reads user input from keyboard
-        boolean isRunning = true; // controls the while loop
+        Scanner scanner = new Scanner(System.in);
+        boolean isRunning = true;
         int choice = 0;
 
-        // --- ACCOUNT CREATION (before the menu loop) ---
         System.out.print("Enter your name: ");
-        String name = scanner.nextLine(); // nextLine() reads a full line including spaces
-
+        String name = scanner.nextLine();
         System.out.print("Enter initial balance: ");
         double initialBalance = scanner.nextDouble();
-        scanner.nextLine(); // IMPORTANT: consumes leftover newline character after nextDouble()
-                            // Without this, the next nextLine() would read an empty string
+        scanner.nextLine();
 
-        // Creating an OBJECT (instance) of BankAccount class
-        // 'new' keyword allocates memory and calls the constructor
-        BankAccount account = new BankAccount(name, initialBalance);
+        // ===== OOP: Object creation (Class instantiation) =====
+        BankAccount account;
+
+        System.out.print("What type of account you want to open ? 1: Savings OR 2: Current");
+        int accType = scanner.nextInt();
+
+        // ===== OOP: Polymorphism (parent reference, child object) =====
+        if(accType == 1) { 
+            account = new savingsAccount(name, initialBalance); // Inheritance + Runtime polymorphism
+        }
+        else { 
+            int overDraftLimit = 0;
+            System.out.print("Enter the overdraft limit: ");
+            overDraftLimit = scanner.nextInt();
+
+            account = new currentAccount(name, initialBalance, overDraftLimit); // Inheritance + polymorphism
+        }
+
         System.out.println("Account created! Welcome, " + name + "!\n");
 
-        // --- MAIN MENU LOOP ---
         while (isRunning) {
-            // Display menu options
             System.out.println("Banking Simulation");
             System.out.println();
             System.out.println("1. Deposit");
@@ -36,146 +42,262 @@ class Main {
             System.out.println("5. Exit");
             System.out.println();
             System.out.print("Enter choice 1-5: ");
-            choice = scanner.nextInt();
-            scanner.nextLine(); // consume leftover newline after nextInt()
 
-            // Switch handles each menu option
+            choice = scanner.nextInt();
+            scanner.nextLine();
+
             switch (choice) {
 
-                case 1: // DEPOSIT
+                case 1:
                     System.out.print("Enter amount to deposit: ");
                     double deposit = scanner.nextDouble();
                     scanner.nextLine();
-                    boolean res = account.deposit(deposit); // deposit() returns true/false
-                    if (res) System.out.println("Deposited: " + deposit);
-                    break; // ALWAYS break — without it, falls through to next case
 
-                case 2: // WITHDRAW
+                    // ===== OOP: Method invocation on object =====
+                    boolean res = account.deposit(deposit);
+                    if (res) System.out.println("Deposited: " + deposit);
+                    break;
+
+                case 2:
                     System.out.print("Enter amount to withdraw: ");
                     double wit = scanner.nextDouble();
                     scanner.nextLine();
-                    boolean withdrawn = account.withdraw(wit); // withdraw() returns true/false
+
+                    // ===== OOP: Runtime Polymorphism (method overridden in subclasses) =====
+                    boolean withdrawn = account.withdraw(wit);
+
                     if (withdrawn) {
-                        double remaining = account.showBalance(); // showBalance() returns balance AND prints it
+                        double remaining = account.showBalance();
                         System.out.println("Withdrawn: " + wit + " | Remaining: " + remaining);
                     }
                     break;
 
-                case 3: // DISPLAY BALANCE
-                    account.showBalance(); // calling method on the object
-                    break; // don't forget break — missing this falls through to case 4/5
+                case 3:
+                    // ===== OOP: Encapsulation (accessing data via method, not directly) =====
+                    account.showBalance();
+                    break;
 
-                case 4: // OPEN NEW ACCOUNT
+                case 4:
                     System.out.print("Enter new account holder name: ");
                     String newName = scanner.nextLine();
                     System.out.print("Enter initial balance: ");
                     double newBalance = scanner.nextDouble();
                     scanner.nextLine();
-                    account = new BankAccount(newName, newBalance); // reassign account variable to new object
+
+                    // NOTE: This breaks polymorphism design (direct base class usage)
+                    account = new BankAccount(newName, newBalance);
+
                     System.out.println("New account created for " + newName + "!");
                     break;
 
-                case 5: // EXIT
-                    isRunning = false; // sets flag to false, loop exits naturally
+                case 5:
+                    isRunning = false;
                     break;
 
-                default: // handles any input outside 1-5
+                default:
                     System.out.println("Invalid choice, enter 1-5.");
             }
             System.out.println();
         }
-        scanner.close(); // always close scanner to free resources
+        scanner.close();
     }
 }
 
-// ============================================================
-// BANKACCOUNT CLASS — owns all data and business logic
-// This is where OOP concepts are demonstrated:
-//   - Encapsulation: private fields, public methods
-//   - Abstraction: Main doesn't know HOW methods work internally
-//   - Constructor: initializes object with valid starting state
-// ============================================================
+
+// ===== OOP: Base Class =====
+// Demonstrates Encapsulation + Abstraction (basic account behavior hidden behind methods)
 class BankAccount {
 
-    // ENCAPSULATION: fields are private
-    // Nobody outside this class can directly read or change these
-    private String ownerName;
-    private double balance;
+    // ===== OOP: Encapsulation (data hiding using protected) =====
+    protected String ownerName;
+    protected double balance;
 
-    // CONSTRUCTOR: called when 'new BankAccount(...)' is used
-    // Sets up the object with initial values
-    // 'this' is needed here because parameter names match field names
-    // this.ownerName = the field | ownerName = the parameter
     BankAccount(String ownerName, double balance) {
         this.ownerName = ownerName;
         this.balance = balance;
     }
 
-    // GETTER METHOD (accessor)
-    // Since balance is private, this is the controlled way to read it
-    // Also prints the balance — returns the value for use in calculations
+    // ===== OOP: Method abstraction (user interacts via method, not fields) =====
     public double showBalance() {
         System.out.println("Balance of " + ownerName + " is " + balance);
-        return this.balance; // returns value so caller can use it (e.g. case 2)
+        return this.balance;
     }
 
-    // DEPOSIT METHOD
-    // Returns boolean so caller knows if it succeeded or failed
-    // Validation: rejects zero or negative deposits
     public boolean deposit(double balance) {
-        // 'balance' here is the parameter (amount to deposit)
-        // 'this.balance' is the field (account's actual balance)
-        // 'this' disambiguates them since they share the same name
         if (balance <= 0) {
             System.out.println("Enter a valid amount.");
-            return false; // early return — stops execution immediately
+            return false;
         }
-        this.balance += balance; // shorthand for: this.balance = this.balance + balance
+        this.balance += balance;
         return true;
     }
 
-    // WITHDRAW METHOD
-    // Two validations: invalid amount AND insufficient funds
-    // Order matters: check invalid amount first, then check funds
+    // ===== OOP: Method designed for overriding =====
     public boolean withdraw(double balance) {
         if (balance <= 0) {
             System.out.println("Enter a valid amount.");
             return false;
         }
-        if (balance > this.balance) { // can't withdraw more than available
+        if (balance > this.balance) {
             System.out.println("Insufficient funds. Balance: " + this.balance);
             return false;
         }
-        this.balance -= balance; // deduct the amount
+        this.balance -= balance;
         return true;
     }
 }
 
-// ============================================================
-// KEY OOP CONCEPTS DEMONSTRATED IN THIS PROGRAM:
-//
-// 1. ENCAPSULATION
-//    - ownerName and balance are private
-//    - Access only through public methods (deposit, withdraw, showBalance)
-//    - Validation inside methods prevents invalid state (e.g. negative balance)
-//
-// 2. ABSTRACTION
-//    - Main just calls account.deposit(500) without knowing how it works
-//    - Complexity is hidden behind clean method names
-//
-// 3. CONSTRUCTOR
-//    - Guarantees every BankAccount starts with valid owner and balance
-//    - Called automatically when 'new BankAccount(...)' is used
-//
-// 4. 'this' KEYWORD
-//    - Refers to the current object's fields
-//    - Required when parameter name matches field name (constructor, deposit, withdraw)
-//    - Not about private/public — about disambiguation
-//
-// STILL TO ADD (for full OOP coverage):
-//    - INHERITANCE: SavingsAccount extends BankAccount
 
-Without static — the field/method belongs to an object. Every object gets its own copy.
-With static — the field/method belongs to the class itself. Every object shares the same
-//    - POLYMORPHISM: SavingsAccount overrides withdraw() with its own rules
-// ============================================================
+// ===== OOP: Inheritance (IS-A relationship) =====
+class savingsAccount extends BankAccount{
+    
+    protected float interest;
+    
+    savingsAccount(String ownerName, double balance){
+        super(ownerName, balance); // ===== OOP: Constructor chaining =====
+        this.interest = interest;
+    }
+
+    // ===== OOP: Method Overriding (Runtime Polymorphism) =====
+    @Override
+    public boolean withdraw(double balance) {
+        if (balance <= 0) {
+            System.out.println("Enter a valid amount.");
+            return false;
+        }
+        if (balance > this.balance) {
+            System.out.println("Insufficient funds. Balance: " + this.balance);
+            return false;
+        }
+
+        // Business rule override (Savings constraint)
+        if (balance > 100) this.balance -= balance;
+        else {
+            System.out.println("Amount should be grater than 100");
+            return false;
+        }
+        return true;
+    }
+}
+
+
+// ===== OOP: Inheritance + Extension =====
+class currentAccount extends BankAccount{
+
+    private int overDraftLimit = 0;
+
+    currentAccount(String ownerName, double balance, int overDraftLimit){
+        super(ownerName, balance); // ===== Constructor chaining =====
+        this.overDraftLimit = overDraftLimit;
+    }
+
+    // ===== OOP: Method Overriding (Runtime Polymorphism) =====
+    @Override
+    public boolean withdraw(double balance) {
+        if (balance <= 0) {
+            System.out.println("Enter a valid amount.");
+            return false;
+        }
+
+        // Extended rule using overdraft (specialized behavior)
+        if (balance > this.balance + this.overDraftLimit) {
+            System.out.println("Insufficient funds. Balance: " + this.balance);
+            return false;
+        }
+        this.balance -= balance;
+        return true;
+    }
+}
+
+
+/*
+======================== OOP CONCEPTS USED (REVISION NOTES) ========================
+
+1. CLASS
+   Definition: Blueprint/template for creating objects.
+   Example in code:
+   - BankAccount, savingsAccount, currentAccount, Main
+
+-----------------------------------------------------------------------------------
+
+2. OBJECT (INSTANCE)
+   Definition: A real-world entity created from a class using 'new'.
+   Example in code:
+   - account = new savingsAccount(...)
+   - account = new currentAccount(...)
+   - account = new BankAccount(...)
+
+-----------------------------------------------------------------------------------
+
+3. ENCAPSULATION
+   Definition: Wrapping data (variables) + methods together and restricting direct access.
+   Example in code:
+   - protected String ownerName;
+   - protected double balance;
+   - Access done via methods like deposit(), withdraw(), showBalance()
+
+-----------------------------------------------------------------------------------
+
+4. INHERITANCE (IS-A RELATIONSHIP)
+   Definition: One class acquires properties and behavior of another class using 'extends'.
+   Example in code:
+   - class savingsAccount extends BankAccount
+   - class currentAccount extends BankAccount
+
+-----------------------------------------------------------------------------------
+
+5. POLYMORPHISM (RUNTIME POLYMORPHISM)
+   Definition: Same method behaves differently based on object type at runtime.
+   Example in code:
+   - BankAccount account;
+   - account = new savingsAccount(...)
+   - account = new currentAccount(...)
+   - account.withdraw(...) behaves differently for each class
+
+-----------------------------------------------------------------------------------
+
+6. METHOD OVERRIDING
+   Definition: Child class provides its own implementation of parent method.
+   Example in code:
+   - savingsAccount overrides withdraw()
+   - currentAccount overrides withdraw()
+
+-----------------------------------------------------------------------------------
+
+7. ABSTRACTION (PARTIAL)
+   Definition: Hiding implementation details and showing only essential behavior.
+   Example in code:
+   - User calls account.withdraw(), deposit(), showBalance()
+   - Internal logic differs but user doesn’t care
+
+-----------------------------------------------------------------------------------
+
+8. CONSTRUCTOR
+   Definition: Special method used to initialize objects.
+   Example in code:
+   - BankAccount(String ownerName, double balance)
+   - savingsAccount(...)
+   - currentAccount(...)
+
+-----------------------------------------------------------------------------------
+
+9. SUPER KEYWORD
+   Definition: Used to call parent class constructor.
+   Example in code:
+   - super(ownerName, balance);
+
+-----------------------------------------------------------------------------------
+
+10. METHOD OVERLOADING (NOT USED HERE)
+   Definition: Same method name with different parameters in same class.
+
+-----------------------------------------------------------------------------------
+
+11. KEY OOP FLOW IN THIS PROGRAM
+   - User chooses account type
+   - Object created dynamically (savings or current)
+   - Same reference (BankAccount) used
+   - Different behavior executed (polymorphism)
+
+===================================================================================
+*/
