@@ -174,5 +174,8 @@ class BankAccount {
 //
 // STILL TO ADD (for full OOP coverage):
 //    - INHERITANCE: SavingsAccount extends BankAccount
+
+Without static — the field/method belongs to an object. Every object gets its own copy.
+With static — the field/method belongs to the class itself. Every object shares the same
 //    - POLYMORPHISM: SavingsAccount overrides withdraw() with its own rules
 // ============================================================
